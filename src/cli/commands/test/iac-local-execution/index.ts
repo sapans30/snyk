@@ -29,7 +29,10 @@ import {
   trackUsage,
 } from './measurable-methods';
 import { UnsupportedEntitlementError } from '../../../../lib/errors/unsupported-entitlement-error';
-import { UnsupportedEntitlementFlagError } from './assert-iac-options-flag';
+import {
+  FlagError,
+  UnsupportedEntitlementFlagError,
+} from './assert-iac-options-flag';
 import { config as userConfig } from '../../../../lib/user-config';
 import config from '../../../../lib/config';
 import { findAndLoadPolicy } from '../../../../lib/policy';
@@ -44,6 +47,8 @@ import {
 } from './oci-pull';
 import { isValidUrl } from './url-utils';
 import chalk from 'chalk';
+import { isFeatureFlagSupportedForOrg } from '../../../../lib/feature-flags';
+import { shareResults } from '../../../../lib/iac/cli-share-results';
 
 // this method executes the local processing engine and then formats the results to adapt with the CLI output.
 // this flow is the default GA flow for IAC scanning.
@@ -142,6 +147,19 @@ export async function test(
       }
       // If something has gone wrong, err on the side of allowing the user to
       // run their tests by squashing the error.
+    }
+
+    if (options.report) {
+      const isCliReportEnabled = await isFeatureFlagSupportedForOrg(
+        'iacCliShareResults',
+        orgPublicId,
+      );
+
+      if (!isCliReportEnabled.ok) {
+        throw new FlagError('report', 'iacCliShareResults');
+      }
+
+      shareResults(filteredIssues);
     }
 
     addIacAnalytics(filteredIssues, {

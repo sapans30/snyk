@@ -92,6 +92,7 @@ export interface Options {
   'exclude-base-image-vulns'?: boolean;
   supportUnmanagedVulnDB?: boolean;
   'no-markdown'?: boolean;
+  report?: boolean;
 }
 
 // TODO(kyegupov): catch accessing ['undefined-properties'] via noImplicitAny
