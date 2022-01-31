@@ -232,7 +232,7 @@ jobs:
   test-windows:
     <<: *defaults
     executor: win/default
-    working_directory: ~\snyk
+    working_directory: C:\Users\circleci\snyk
     steps:
       - run:
           name: Configuring Git
@@ -248,11 +248,13 @@ jobs:
           npm_install: true # reinstalling as workspace node_modules is for linux
           npm_cache_directory: ~\AppData\Local\npm-cache
       - run:
-          name: Configuring Snyk CLI
-          command: node ./bin/snyk config set "api=$env:SNYK_API_KEY"
+          name: Configuring artifact
+          command: C:\Users\circleci\snyk\binary-releases\snyk-win.exe config set "api=$env:SNYK_API_KEY"
       - run:
-          name: Running acceptance tests
+          name: Testing artifact
           command: npm run test:acceptance
+          environment:
+            TEST_SNYK_COMMAND: C:\Users\circleci\snyk\binary-releases\snyk-win.exe
   test-linux:
     <<: *defaults
     docker:
@@ -304,7 +306,7 @@ jobs:
             npx tap -Rspec --timeout=300 --node-arg=-r --node-arg=ts-node/register \
               $(circleci tests glob "test/tap/*.test.*" | circleci tests split)
 
-  dev-release:
+  build-artifacts:
     <<: *defaults
     docker:
       - image: cimg/node:<< parameters.node_version >>
@@ -337,6 +339,10 @@ jobs:
       - pack_snyk_cli
       - store_artifacts:
           path: ./dist-pack
+      - persist_to_workspace:
+          root: .
+          paths:
+            - binary-releases
   prod-release:
     <<: *defaults
     docker:
@@ -416,10 +422,10 @@ workflows:
               ignore:
                 - master
       - test-windows:
-          name: Jest Tests (Windows)
+          name: Acceptance Tests (snyk-win.exe)
           context: nodejs-install
           requires:
-            - Build
+            - Build Artifacts
           filters:
             branches:
               ignore:
@@ -445,10 +451,9 @@ workflows:
             branches:
               ignore:
                 - master
-      - dev-release:
-          name: Development Release
+      - build-artifacts:
+          name: Build Artifacts
           requires:
-            - Lint
             - Build
           filters:
             branches:
