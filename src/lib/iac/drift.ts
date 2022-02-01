@@ -1,17 +1,16 @@
-import * as needle from 'needle';
-import * as fs from 'fs';
 import * as debugLib from 'debug';
-import * as isExe from 'isexe';
-import * as which from 'which';
-import * as cacheDir from 'cachedir';
 import * as child_process from 'child_process';
 import * as os from 'os';
+import envPaths from 'env-paths';
+import * as fs from 'fs';
+import { spinner } from '../spinner';
+import { makeRequest } from '../request';
 
+const paths = envPaths('snyk');
 const debug = debugLib('drift');
-const dctlBaseUrl =
-  'https://github.com/snyk/driftctl/releases/latest/download/driftctl';
-const cache = cacheDir('snyk');
-const driftctlPath = cache + '/driftctl';
+export const driftctlVersion = 'v0.19.0';
+const dctlBaseUrl = 'https://github.com/snyk/driftctl/releases/download/';
+const driftctlPath = paths.cache + '/driftctl_' + driftctlVersion;
 
 interface DriftCTLOptions {
   quiet?: true;
@@ -88,7 +87,8 @@ export function parseArgs(
     args.push(options['tf-lockfile']);
   }
 
-  let configDir = cache;
+  let configDir = paths.config;
+  createIfNotExists(paths.config);
   if (options['config-dir']) {
     configDir = options['config-dir'];
   }
@@ -113,7 +113,7 @@ export function parseArgs(
 }
 
 export async function driftctl(args: string[]): Promise<number> {
-  debug('driftctl(%s)', args);
+  debug('running driftctl %s ', args.join(' '));
 
   const path = await findOrDownload();
 
@@ -142,9 +142,7 @@ async function findOrDownload(): Promise<string> {
   let dctl = await findDriftCtl();
   if (dctl === '') {
     try {
-      if (!fs.existsSync(cache)) {
-        fs.mkdirSync(cache, { recursive: true });
-      }
+      createIfNotExists(paths.cache);
       dctl = driftctlPath;
       await download(driftctlUrl(), dctl);
     } catch (err) {
@@ -158,24 +156,16 @@ export async function findDriftCtl(): Promise<string> {
   // lookup in custom path contained in env var DRIFTCTL_PATH
   let dctlPath: string | null | undefined = process.env.DRIFTCTL_PATH;
   if (dctlPath != undefined) {
-    const exists = isExe.sync(dctlPath, { ignoreErrors: true });
+    const exists = await isExe(dctlPath);
     if (exists) {
       debug('Found driftctl in $DRIFTCTL_PATH: %s', dctlPath);
       return dctlPath;
     }
   }
 
-  // Lookup in user path
-  dctlPath = which.sync('driftctl', { all: false, nothrow: true });
-  if (dctlPath != null) {
-    debug('Found driftctl in $PATH: %s', dctlPath);
-    console.log('Found driftctl in $PATH: %s', dctlPath);
-    return dctlPath;
-  }
-
   // lookup in app cache
   dctlPath = driftctlPath;
-  const exists = isExe.sync(dctlPath, { ignoreErrors: true });
+  const exists = await isExe(dctlPath);
   if (exists) {
     debug('Found driftctl in cache: %s', dctlPath);
     return dctlPath;
@@ -188,25 +178,50 @@ export async function findDriftCtl(): Promise<string> {
 async function download(url, destination: string): Promise<boolean> {
   debug('downloading driftctl into %s', destination);
 
+  const payload = {
+    method: 'GET',
+    url: url,
+    output: destination,
+    follow: 3,
+  };
+
+  await spinner('Downloading');
   return new Promise<boolean>((resolve, reject) => {
-    needle.get(url, { output: destination, follow: 3 }, function(
-      err,
-      response,
-    ) {
-      debug('File saved: ' + destination);
+    makeRequest(payload, function(err, res, body) {
+      spinner.clear('Downloading');
       if (err) {
         reject(err);
         return;
       }
-      if (response.statusCode !== 200) {
-        // badness
-        reject(response.statusCode);
+      if (res.statusCode !== 200) {
+        reject(res.statusCode);
         return;
       }
+      fs.writeFileSync(destination, body);
+      debug('File saved: ' + destination);
       fs.chmodSync(destination, 744);
       resolve(true);
     });
   });
+  /*return new Promise<boolean>((resolve, reject) => {
+     needle.get(url, { output: destination, follow: 3 }, function(
+       err,
+       response,
+     ) {
+       debug('File saved: ' + destination);
+       if (err) {
+         reject(err);
+         return;
+       }
+       if (response.statusCode !== 200) {
+         // badness
+         reject(response.statusCode);
+         return;
+       }
+       fs.chmodSync(destination, 744);
+       resolve(true);
+     });
+   });*/
 }
 
 function driftctlUrl(): string {
@@ -241,5 +256,23 @@ function driftctlUrl(): string {
       break;
   }
 
-  return `${dctlBaseUrl}_${platform}_${arch}${ext}`;
+  return `${dctlBaseUrl}/${driftctlVersion}/driftctl_${platform}_${arch}${ext}`;
+}
+
+function isExe(dctlPath: string): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    fs.access(dctlPath, fs.constants.X_OK, (err) => {
+      if (err) {
+        resolve(false);
+        return;
+      }
+      resolve(true);
+    });
+  });
+}
+
+function createIfNotExists(path: string) {
+  if (!fs.existsSync(path)) {
+    fs.mkdirSync(path, { recursive: true });
+  }
 }
