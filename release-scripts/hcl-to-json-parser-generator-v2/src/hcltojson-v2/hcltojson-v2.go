@@ -2,29 +2,42 @@ package main
 
 import (
 "github.com/gopherjs/gopherjs/js"
-"encoding/json"
-"fmt"
+"github.com/miratronix/jopher"
+"github.com/snyk/snyk-iac-parsers/terraform"
+// "fmt"
 )
 func main() {
-  js.Module.Get("exports").Set("parseHCL2JSON", parseHCL2JSON);
-  js.Module.Get("exports").Set("extractVariables", extractVariables);
+  js.Module.Get("exports").Set("newHCL2JSONParser", newHCL2JSONParser);
 }
 
-//TODO: need to update with the snyk-iac-parsers branch
-// put right input output based on the file
-
-func extractVariables(file string, fileContent string) (variableMap map[string]interface{}) {
-variableMap = map[string]interface{}{}
-jsonstr:=`{"variable":{"name":"value","name2":{"type":"int", "default": 123}}}`
-err1 := json.Unmarshal([]byte(jsonstr), &variableMap)
-if err1 != nil {
-        fmt.Printf("error : %s", err1)
-}
-// err1 := json.Unmarshal([]byte(fileContent), &variableMap)
-return variableMap
+type HCLJ2SONParser struct {
+	*js.Object
+	FileName              string                          `js:"fileName"`
+	FileContent           string                          `js:"fileContent"`
+	VariableMap           terraform.VariableMap           `js:"variableMap"`
+	ExtractVariables      func(...interface{}) *js.Object `js:"extractVariables"`
+	ParseHclToJson        func(...interface{}) *js.Object `js:"parseHCL2JSON"`
 }
 
-func parseHCL2JSON(file string, fileContent string, variableMap map[string]interface{}) string {
-//     variableMap, _ = extractVariables("vpc.tf", "resource something");
-return "parsed JSON is back"
+func newHCL2JSONParser(fileName string, fileContent string, variableMap terraform.VariableMap) *js.Object {
+	o := HCLJ2SONParser{Object: js.Global.Get("Object").New()}
+	o.FileName =    fileName
+	o.FileContent = fileContent
+	o.VariableMap = variableMap
+
+	o.ExtractVariables = jopher.Promisify(o.extractVariables)
+	o.ParseHclToJson = jopher.Promisify(o.parseHCL2JSON)
+	return o.Object
+}
+
+func (o *HCLJ2SONParser) extractVariables() (variableMap string) {
+  variableMap,_ = terraform.ExtractVariables(o.FileName, o.FileContent)
+//   fmt.Println("extracted variables: ", variableMap)
+  return variableMap
+}
+
+func (o *HCLJ2SONParser) parseHCL2JSON() (parsedJSON string) {
+    parsedJSON, _ = terraform.ParseHclToJson(o.FileName, o.FileContent, o.VariableMap);
+//       fmt.Println("parsedJSON: ", parsedJSON)
+    return parsedJSON
 }
