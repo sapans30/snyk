@@ -43,16 +43,25 @@ function createJsonResultOutput(jsonResult, options: Options) {
   return jsonResultClone;
 }
 
-function formatJsonVulnerabilityStructure(jsonResult, options: Options) {
+export function formatJsonVulnerabilityStructure(jsonResult, options: Options) {
   if (options['group-issues']) {
     jsonResult.vulnerabilities = Object.values(
       (jsonResult.vulnerabilities || []).reduce((acc, vuln): Record<
         string,
         any
       > => {
-        vuln.from = [vuln.from].concat(acc[vuln.id]?.from || []);
-        vuln.name = [vuln.name].concat(acc[vuln.id]?.name || []);
-        acc[vuln.id] = vuln;
+        if (!acc[vuln.id]) {
+          acc[vuln.id] = vuln;
+          acc[vuln.id].from = [vuln.from];
+          acc[vuln.id].name = [vuln.name];
+        } else {
+          // WARNING! Please refrain saving the extended "from" and "name" arrays in the current vuln and then assigning it to acc[vuln.id] (acc[vuln.id] = vuln),
+          // because this would mean that for each vuln that needs to be grouped, an array larger by 1 is added to the vuln. In large vulns results this may cause
+          // OOM issues because of data duplication.
+          // Instead, when acc[vuln.id] exists, add the current vuln's 'from' and 'name' values to the existing acc[vuln.id].from and acc[vuln.id].name arrays.
+          acc[vuln.id].from.push(vuln.from);
+          acc[vuln.id].name.push(vuln.name);
+        }
         return acc;
       }, {}),
     );
