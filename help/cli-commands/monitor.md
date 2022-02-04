@@ -1,4 +1,4 @@
-# snyk monitor -- snapshot and continuously monitor a project for open source vulnerabilities and license issues
+# Monitor
 
 ## Usage
 
@@ -12,10 +12,10 @@ The `snyk monitor` command creates a project in your Synk account to be continuo
 
 Possible exit codes and their meaning:
 
-**0**: success, no vulnerabilities found<br />
-**1**: action_needed, vulnerabilities found<br />
-**2**: failure, try to re-run command<br />
-**3**: failure, no supported projects detected<br />
+**0**: success, no vulnerabilities found\
+**1**: action\_needed, vulnerabilities found\
+**2**: failure, try to re-run command\
+**3**: failure, no supported projects detected
 
 ## Configure the Snyk CLI
 
@@ -45,7 +45,7 @@ Example: `--detection-depth=3` limits search to the specified directory (or the 
 
 Can be used with `--all-projects` and `--yarn-workspaces` to indicate sub-directories and files to exclude. Must be comma separated.
 
-Use the exclude option with `--detection-depth` to ignore directories at any depth.
+Use the `--exclude` option with `--detection-depth` to ignore directories at any depth.
 
 ### `--prune-repeated-subdependencies`, `-p`
 
@@ -67,17 +67,17 @@ Include development-only dependencies. Applicable only for some package managers
 
 Default: scan only production dependencies.
 
-### `--org=<ORG_NAME>`
+### `--org=<ORG_ID>`
 
-Specify the <ORG_NAME> to run Snyk commands tied to a specific organization. The <ORG_NAME> influences where new projects are created after running the monitor command, some features availability, and private test limits.
+Specify the `<ORG_ID>` to run Snyk commands tied to a specific organization. The `<ORG_ID>` influences where new projects are created after running the monitor command, some features availability, and private test limits.
 
 If you have multiple organizations, you can set a default from the CLI using:
 
-`$ snyk config set org=<ORG_NAME>`
+`$ snyk config set org=<ORG_`ID`>`
 
-Set a default to ensure all newly monitored projects are created under your default organization. If you need to override the default, use the `--org=<ORG_NAME>` option.
+Set a default to ensure all newly monitored projects are created under your default organization. If you need to override the default, use the `--org=<ORG_ID>` option.
 
-Default: `<ORG_NAME>` that is the current preferred organization in your [Account settings](https://app.snyk.io/account).
+Default: `<ORG_ID>` that is the current preferred organization in your [Account settings](https://app.snyk.io/account).
 
 ### `--file=<FILE>`
 
@@ -97,8 +97,7 @@ Apply and use ignore rules from the Snyk policies your dependencies; otherwise i
 
 Display the dependency paths from the top level dependencies down to the vulnerable packages. Does not affect output when using JSON `--json` output.
 
-Default: `some` (a few example paths shown).
-`false` is an alias for `none`.
+Default: `some` (a few example paths shown). `false` is an alias for `none`.
 
 ### `--project-name=<PROJECT_NAME>`
 
@@ -128,7 +127,7 @@ Return results in SARIF format.
 
 ### `--sarif-file-output=<OUTPUT_FILE_PATH>`
 
-Save test output in SARIF format directly to the <OUTPUT_FILE_PATH> file, regardless of whether or not you use the `--sarif` option.
+Save test output in SARIF format directly to the \<OUTPUT\_FILE\_PATH> file, regardless of whether or not you use the `--sarif` option.
 
 This is especially useful if you want to display the human-readable test output using stdout and at the same time save the SARIF format output to a file.
 
@@ -140,9 +139,9 @@ Report only vulnerabilities at the specified level or higher.
 
 Fail only when there are vulnerabilities that can be fixed.
 
-- `all`: fail when there is at least one vulnerability that can be either upgraded or patched.
-- `upgradable`: fail when there is at least one vulnerability that can be upgraded.
-- `patchable`: fail when there is at least one vulnerability that can be patched.
+* `all`: fail when there is at least one vulnerability that can be either upgraded or patched.
+* `upgradable`: fail when there is at least one vulnerability that can be upgraded.
+* `patchable`: fail when there is at least one vulnerability that can be patched.
 
 If vulnerabilities do not have a fix and this option is being used, tests pass.
 
@@ -232,7 +231,7 @@ Specify a custom path to the packages folder.
 
 When monitoring a .NET project, use this option to add a custom prefix to the name of files inside a project along with any desired separators, for example, `snyk monitor --file=my-project.sln --project-name-prefix=my-group/`. This is useful when you have multiple projects with the same name in other `.sln` files.
 
-## Options for npm projects
+## Option for npm projects
 
 ### `--strict-out-of-sync=true|false`
 
@@ -252,7 +251,7 @@ Default: true
 
 Detect and scan yarn workspaces. You can specify how many sub-directories to search using `--detection-depth` and exclude directories and files using `--exclude`.
 
-## Options for CocoaPods projects
+## Option for CocoaPods projects
 
 ### `--strict-out-of-sync=true|false`
 
@@ -266,13 +265,12 @@ Default: false
 
 Indicate which specific Python commands to use based on Python version. The default is `python` which executes your default python version. Run 'python -V' to find out what version it is. If you are using multiple Python versions, use this parameter to specify the correct Python command for execution.
 
-Default: `python`
-Example: `--command=python3`
+Default: `python` Example: `--command=python3`
 
 ### `--skip-unresolved=true|false`
 
 Allow skipping packages that are not found in the environment.
 
-## `-- [<CONTEXT-SPECIFIC_OPTIONS>]`
+### `-- [<CONTEXT-SPECIFIC_OPTIONS>]`
 
 Use context-specific options to pass extra arguments directly to Gradle, Maven, or other build tools. These options are specified last. Example: `snyk test -- --build-cache`
